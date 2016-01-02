@@ -19,17 +19,17 @@ expression: current_node
 
 sub_expression: expression '.' ( identifier | multi_select_list | multi_select_hash | function_expression | '*' )
 
-pipe_expression: expression "|" expression
+pipe_expression: expression(2.. /\\|/)
 
-or_expression: expression "||" expression
+or_expression: expression(2.. /\\|\\|/)
 
-and_expression: expression "&&" expression
+and_expression: expression(2.. /&&/)
 
 not_expression: "!" expression
 
 paren_expression: "(" expression ")"
 
-index_expression: expression bracket_specifier | bracket_specifier
+index_expression: expression(?) bracket_specifier
 
 multi_select_list: "[" expression(s /,/) "]"
 
