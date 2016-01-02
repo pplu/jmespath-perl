@@ -1,0 +1,96 @@
+#!/usr/bin/env perl
+
+use warnings;
+use strict;
+
+use Parse::RecDescent;
+
+$::RD_HINT=1;
+
+my $grammar = q {
+
+startrule: expression
+
+expression: sub_expression | index_expression | or_expression | identifier
+expression: '*' | multi_select_list | multi_select_hash 
+#| literal
+expression: function_expression | pipe_expression | raw_string
+expression: current_node
+
+sub_expression: expression '.' ( identifier | multi_select_list | multi_select_hash | function_expression | '*' )
+
+pipe_expression: expression "|" expression
+
+or_expression: expression "||" expression
+
+and_expression: expression "&&" expression
+
+not_expression: "!" expression
+
+paren_expression: "(" expression ")"
+
+index_expression: expression bracket_specifier | bracket_specifier
+
+multi_select_list: "[" expression(s /,/) "]"
+
+multi_select_hash: "{" keyval_expr(s /,/) "}"
+
+keyval_expr: identifier ":" expression
+
+bracket_specifier: "[" ( number | "*" | slice_expression ) "]" | "[]" | "[?" expression "]"
+
+comparator_expression: expression comparator expression
+
+slice_expression: number(?) ":" number(?) optional_slice(?)
+
+optional_slice: ":" number
+
+comparator: "<" | "<=" | "==" | ">=" | ">" | "!="
+
+function_expression: unquoted_string ( no_args | one_or_more_args )
+
+no_args: "(" ")"
+
+one_or_more_args: "(" function_arg(s) ")"
+
+function_arg: expression | expression_type
+
+current_node: "@"
+
+expression_type: "&" expression
+
+raw_string: "'" raw_string_chars "'"
+
+raw_string_chars: /[^']*/
+
+#literal: "`" json_value "`"
+
+unescaped_literal: /[a-zA-Z0-9]*/
+
+escaped_literal: escaped_char | escape
+
+number: /-?[0-9]+/ 
+
+identifier: unquoted_string | quoted_string
+
+unquoted_string: /[A-Za-z_][A-Za-z0-9_]*/
+
+quoted_string: quote ( unescaped_char | escaped_char )(s) quote
+
+unescaped_char
+
+escape: '\\'
+
+quote: '"'
+
+escaped_char = escape /["/bfnrt\\]/
+
+};
+ 
+my $parser = new Parse::RecDescent ($grammar) or die "Bad grammar!\n";
+ 
+foreach my $text ('thing.name',
+                  'locations[].name',
+                  'people.[name, age]') {
+  defined $parser->startrule($text) or print "Bad text!\n";
+}
