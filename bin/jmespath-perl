@@ -5,8 +5,11 @@ use strict;
 use v5.10;
 
 use Parse::RecDescent;
+use JSON::MaybeXS;
+use Path::Class;
+use Test::More;
 
-$::RD_HINT=1;
+$::RD_HINT=0;
 
 my $grammar = q {
 <autotree>
@@ -94,17 +97,31 @@ escaped_char: escape /["\/bfnrt\\\\]/
 };
  
 my $parser = new Parse::RecDescent ($grammar) or die "Bad grammar!\n";
+
+my $testdir = dir("jmespath.test/tests");
  
-foreach my $text ('thing.name',
-                  'locations[].name',
-                  'people.[name, age]') {
-  say "For: $text";
-  my $tree = $parser->startrule($text);
-  if (not defined $tree) {
-    say "Bad text!";
-  } else {
-    say "Good text!";
-    use Data::Dumper;
-    say Dumper($tree);
-  }
+foreach my $file (grep { /\.json$/ } $testdir->children) {
+  subtest "Tests in file $file" => sub {
+    my $test_struct = decode_json($file->slurp);
+  
+    foreach my $test (@$test_struct) {
+      my $given = $test->{ given };
+  
+      foreach my $case (@{ $test->{ cases } }) {
+        my $expression = $case->{ expression };
+        my $error = $case->{ error };
+  
+        my $tree = $parser->startrule($expression);
+        if (not defined $tree) {
+          if (defined $error) { pass("The parser failed as expected for $expression") } 
+          else { fail("The parser didn't fail as expected for $expression") }
+        } else {
+          if (not defined $error) { pass("The parser passed as expected for $expression") } 
+          else { fail("The parser didn't pass as expected for $expression") }
+        }
+      }
+    }
+  } 
 }
+
+done_testing;
