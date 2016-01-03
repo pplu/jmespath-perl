@@ -12,7 +12,6 @@ use Test::More;
 $::RD_HINT=0;
 
 my $grammar = q {
-<autotree>
 
 startrule: expression(s)
 
@@ -101,27 +100,31 @@ my $parser = new Parse::RecDescent ($grammar) or die "Bad grammar!\n";
 my $testdir = dir("jmespath.test/tests");
  
 foreach my $file (grep { /\.json$/ } $testdir->children) {
-  subtest "Tests in file $file" => sub {
-    my $test_struct = decode_json($file->slurp);
-  
-    foreach my $test (@$test_struct) {
-      my $given = $test->{ given };
-  
-      foreach my $case (@{ $test->{ cases } }) {
-        my $expression = $case->{ expression };
-        my $error = $case->{ error };
-  
-        my $tree = $parser->startrule($expression);
-        if (not defined $tree) {
-          if (defined $error) { pass("The parser failed as expected for $expression") } 
-          else { fail("The parser didn't fail as expected for $expression") }
-        } else {
-          if (not defined $error) { pass("The parser passed as expected for $expression") } 
-          else { fail("The parser didn't pass as expected for $expression") }
-        }
+  diag "Tests in file $file";
+  my $test_struct = decode_json($file->slurp);
+
+  foreach my $test (@$test_struct) {
+    my $given = $test->{ given };
+
+    foreach my $case (@{ $test->{ cases } }) {
+      my $expression = $case->{ expression };
+      my $error = $case->{ error };
+
+      my $tree = $parser->startrule($expression);
+      if (not defined $tree) {
+        if (defined $error) { pass("The parser failed as expected for $expression") } 
+        else { fail("The parser didn't fail as expected for $expression") }
+      } else {
+        if (not defined $error) { pass("The parser passed as expected for $expression") } 
+        else { fail("The parser didn't pass as expected for $expression") }
+      }
+
+      my $expected_result = $case->{ result };
+      if (defined $expected_result) {
+        is_deeply(undef, $expected_result, "Evaluation of $expression rendered expected result");
       }
     }
-  } 
+  }
 }
 
 done_testing;
