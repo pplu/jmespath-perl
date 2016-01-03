@@ -92,8 +92,16 @@ escape: '\\'
 escaped_char: escape /["\/bfnrt\\\\]/
 
 };
- 
-my $parser = Parse::RecDescent->new($grammar) or die "Bad grammar!\n";
+
+my $parser = Parse::RecDescent->new($grammar); 
+#Parse::RecDescent->Precompile(
+#  { },
+#  $grammar, 
+#  "JmesPath"
+#);
+#
+#use JmesPath;
+#my $parser = JmesPath->new;
 
 my $testdir = dir("jmespath.test/tests");
  
