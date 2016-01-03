@@ -2,34 +2,36 @@
 
 use warnings;
 use strict;
+use v5.10;
 
 use Parse::RecDescent;
 
 $::RD_HINT=1;
 
 my $grammar = q {
+<autotree>
 
-startrule: expression
+startrule: expression(s)
 
-expression: sub_expression | index_expression | or_expression | identifier
+expression: sub_expression(s /\\./) | index_expression | or_expression | identifier
 expression: '*' | multi_select_list | multi_select_hash 
 #| literal
 expression: function_expression | pipe_expression | raw_string
 expression: current_node
 
-sub_expression: expression '.' ( identifier | multi_select_list | multi_select_hash | function_expression | '*' )
+sub_expression: '.' ( expression | multi_select_list | multi_select_hash | function_expression | '*' )
 
-pipe_expression: expression(2.. /\\|/)
+pipe_expression: "|" expression
 
-or_expression: expression(2.. /\\|\\|/)
+or_expression: "||" expression
 
-and_expression: expression(2.. /&&/)
+and_expression: "&&" expression
 
 not_expression: "!" expression
 
 paren_expression: "(" expression ")"
 
-index_expression: expression(?) bracket_specifier
+index_expression: bracket_specifier
 
 multi_select_list: "[" expression(s /,/) "]"
 
@@ -37,7 +39,11 @@ multi_select_hash: "{" keyval_expr(s /,/) "}"
 
 keyval_expr: identifier ":" expression
 
-bracket_specifier: "[" ( number | "*" | slice_expression ) "]" | "[]" | "[?" expression "]"
+bracket_specifier: "[" ( number | "*" | slice_expression ) "]" | flatten_list | filter_list
+
+flatten_list: "[]"
+
+filter_list: "[?" expression "]"
 
 comparator_expression: expression comparator expression
 
@@ -75,15 +81,15 @@ identifier: unquoted_string | quoted_string
 
 unquoted_string: /[A-Za-z_][A-Za-z0-9_]*/
 
-quoted_string: quote ( unescaped_char | escaped_char )(s) quote
+quoted_string: '"' escaped_and_unescaped(s) '"'
 
-unescaped_char
+escaped_and_unescaped: unescaped_char | escaped_char
+
+unescaped_char: /A-Za-z0-9/
 
 escape: '\\'
 
-quote: '"'
-
-escaped_char = escape /["/bfnrt\\]/
+escaped_char: escape /["\/bfnrt\\\\]/
 
 };
  
@@ -92,5 +98,13 @@ my $parser = new Parse::RecDescent ($grammar) or die "Bad grammar!\n";
 foreach my $text ('thing.name',
                   'locations[].name',
                   'people.[name, age]') {
-  defined $parser->startrule($text) or print "Bad text!\n";
+  say "For: $text";
+  my $tree = $parser->startrule($text);
+  if (not defined $tree) {
+    say "Bad text!";
+  } else {
+    say "Good text!";
+    use Data::Dumper;
+    say Dumper($tree);
+  }
 }
