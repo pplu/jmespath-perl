@@ -13,8 +13,6 @@ $::RD_HINT=0;
 
 my $grammar = q {
 
-startrule: expression(s)
-
 expression: sub_expression(s /\\./) | index_expression | or_expression | identifier
 expression: '*' | multi_select_list | multi_select_hash 
 #| literal
@@ -95,7 +93,7 @@ escaped_char: escape /["\/bfnrt\\\\]/
 
 };
  
-my $parser = new Parse::RecDescent ($grammar) or die "Bad grammar!\n";
+my $parser = Parse::RecDescent->new($grammar) or die "Bad grammar!\n";
 
 my $testdir = dir("jmespath.test/tests");
  
@@ -110,7 +108,7 @@ foreach my $file (grep { /\.json$/ } $testdir->children) {
       my $expression = $case->{ expression };
       my $error = $case->{ error };
 
-      my $tree = $parser->startrule($expression);
+      my $tree = $parser->expression($expression);
       if (not defined $tree) {
         if (defined $error) { pass("The parser failed as expected for $expression") } 
         else { fail("The parser didn't fail as expected for $expression") }
